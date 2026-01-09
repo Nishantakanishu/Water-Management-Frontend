@@ -10,93 +10,127 @@ import {
 } from 'react-icons/md';
 import NishantProfilePic from './assets/image/Nishant profile pic.jpeg';
 
+// Import Components
+import Dashboard from './components/Dashboard';
+import Profile from './components/Profile';
+import Billing from './components/Billing';
+import Report from './components/Report';
+import Usage from './components/Usage';
+
+// Sidebar Configuration
 const sidebarIcons = [
-  { icon: <MdDashboard size={28} />, label: 'Dashboard' },
-  { icon: <MdPerson size={28} />, label: 'Profile' },
-  { icon: <MdWaterDrop size={28} />, label: 'Water Usage' },
-  { icon: <MdReceiptLong size={28} />, label: 'Bills' },
-  { icon: <MdReportProblem size={28} />, label: 'Report' },
-  { icon: <MdSettings size={28} />, label: 'Settings' },
-  { icon: <MdLogout size={28} />, label: 'Logout' }
+  { id: 'dashboard', icon: <MdDashboard size={24} />, label: 'Dashboard' },
+  { id: 'profile', icon: <MdPerson size={24} />, label: 'Profile' },
+  { id: 'usage', icon: <MdWaterDrop size={24} />, label: 'Water Usage' },
+  { id: 'billing', icon: <MdReceiptLong size={24} />, label: 'Bills & Payments' },
+  { id: 'report', icon: <MdReportProblem size={24} />, label: 'Report Issue' },
+  
 ];
 
 const ConsumerPage = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Sidebar open by default
+  
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Handle tab change
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+  };
+
+  // Render content based on active tab
+  const renderContent = () => {
+    switch (activeTab) {
+        case 'dashboard':
+            return <Dashboard />;
+        case 'profile':
+            return <Profile />;
+        case 'billing':
+            return <Billing />;
+        case 'report':
+            return <Report />;
+        case 'usage':
+             return <Usage />;
+        default:
+            return <Dashboard />;
+    }
+  };
+  
 
   return (
-    <nav className="bg-gradient-to-br from-yellow-300 to-yellow-500 min-h-screen flex items-center justify-center py-8 relative">
-      {/* Sidebar */}
-      <div className={`fixed left-0 top-0 h-full z-20 flex flex-col items-center transition-all duration-300 ${sidebarOpen ? 'w-20 bg-white shadow-2xl' : 'w-0 overflow-hidden'}`}>
-        {sidebarOpen ? (
-          <button
-            className="mt-8 mb-6 bg-yellow-500 text-white rounded-full p-3 shadow-lg hover:bg-yellow-600 transition"
-            onClick={() => setSidebarOpen(false)}
-            title="Hide Sidebar"
-          >
-            <span className="font-bold text-lg">≡</span>
-          </button>
-        ) : null}
-        <div className="flex flex-col gap-6 items-center">
-          {sidebarOpen && sidebarIcons.map((item, idx) => (
-            <div key={idx} className="flex flex-col items-center group cursor-pointer">
-              <div className="text-yellow-600 group-hover:text-yellow-800 transition">
-                {item.icon}
-              </div>
-              <span className="text-xs text-gray-500 mt-1 group-hover:text-yellow-700 transition">{item.label}</span>
+
+    
+    <div className="min-h-screen bg-stone-50 flex font-sans text-stone-900">
+      
+      {/* Sidebar Navigation */}
+      <aside className={`bg-white transition-all duration-300 ease-in-out flex flex-col fixed inset-y-0 left-0 z-30 shadow-xl border-r border-stone-100
+        ${sidebarOpen ? 'w-64' : 'w-20'}`}>
+        <div className="flex items-center justify-between h-20 px-4 border-b border-stone-100">
+            <div className={`flex items-center gap-3 overflow-hidden ${!sidebarOpen && 'justify-center w-full'}`}>
+                 <button 
+                   onClick={() => setSidebarOpen(!sidebarOpen)}
+                   className="bg-amber-500 p-2 rounded-lg flex-shrink-0 text-white hover:bg-amber-600 transition-colors cursor-pointer"
+                 >
+                    <MdWaterDrop className="text-xl" />
+                 </button>
+                 <span className={`font-bold text-lg tracking-wide whitespace-nowrap text-stone-800 transition-opacity duration-300 ${!sidebarOpen && 'hidden'}`}>Smart Meter</span>
             </div>
-          ))}
         </div>
-      </div>
-      {/* Sidebar pop button when closed */}
-      {!sidebarOpen && (
-        <button
-          className="fixed left-2 top-8 z-30 bg-yellow-500 text-white rounded-full p-3 shadow-lg hover:bg-yellow-600 transition"
-          onClick={() => setSidebarOpen(true)}
-          title="Show Sidebar"
-        >
-          <span className="font-bold text-lg">≡</span>
-        </button>
-      )}
-      {/* Main Content */}
-      <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl p-8 flex flex-row gap-10 ml-24">
-        {/* Left Side: Consumer Info */}
-        <div className="flex-1 flex flex-col justify-center">
-          <p className="text-3xl font-bold text-yellow-700 mb-4 tracking-wide drop-shadow-lg">Water Management Consumer Portal</p>
-          <p className="text-xl font-semibold bg-yellow-400 rounded-xl py-3 mb-8 shadow text-center">Welcome, RAMKISHORE S/O PATAN DEEN</p>
-          
-          <div className="flex flex-col items-center mb-6">
-            <div className="bg-gray-100 rounded-full p-2 shadow-lg mb-4">
-              <img className="rounded-full w-32 h-32 border-4 border-yellow-500 object-cover" src={NishantProfilePic} alt="Nishant profile" />
+
+        <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
+            {sidebarIcons.map((item) => (
+                <button 
+                  key={item.id} 
+                  onClick={() => handleTabChange(item.id)}
+                  className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-colors group
+                    ${activeTab === item.id ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-800'}
+                    ${!sidebarOpen && 'justify-center'}
+                  `}>
+                    <div className={`${activeTab === item.id ? 'text-amber-600' : 'group-hover:scale-110 transition-transform'}`}>{item.icon}</div>
+                    <span className={`font-medium text-sm transition-opacity duration-300 ${!sidebarOpen && 'hidden'}`}>{item.label}</span>
+                </button>
+            ))}
+        </nav>
+
+        <div className="p-4 border-t border-stone-100">
+            <button className={`flex items-center gap-4 px-3 py-3 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 w-full transition-colors ${!sidebarOpen && 'justify-center'}`}>
+                <MdLogout size={24} />
+                <span className={`font-medium text-sm transition-opacity duration-300 ${!sidebarOpen && 'hidden'}`}>Sign Out</span>
+            </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+        
+        {/* Top Header here*/}
+        
+        <header className="h-15 bg-white/80 backdrop-blur-md shadow-sm flex items-center justify-between px-4 md:px-8 sticky top-0 z-20 border-b border-stone-100">
+        
+            <div className="w-full h-15 bg-white px-8 py-4 shadow-sm">
+  <h1 className="text-3xl font-extrabold text-stone-900 tracking-tight">
+    Smart <span className="text-amber-500">Water Meter</span>
+  </h1>
+</div>
+
+
+            <div className="flex items-center gap-2 md:gap-4">
+                <div className="text-right hidden sm:block">
+                    <p className="text-sm font-bold text-stone-800">Ramkishore</p>
+                    <p className="text-xs text-stone-500">Consumer ID: ANN2411</p>
+                </div>
+                <img 
+                    src={NishantProfilePic} 
+                    alt="Profile" 
+                    className="w-10 h-10 rounded-full border-2 border-amber-200 object-cover shadow-sm"
+                />
             </div>
-            <p className="text-2xl font-bold text-yellow-800 mb-2">RAMKISHORE S/O PATAN DEEN</p>
-            <p className="text-gray-600 text-lg mb-4">Consumer No: <span className="font-semibold">ANN2411</span></p>
-          </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-yellow-50 rounded-2xl p-6 shadow">
-            <p className="font-medium text-yellow-700">Meter No:</p>
-            <p className="text-gray-700">6799416</p>
-            <p className="font-medium text-yellow-700">Last Login:</p>
-            <p className="text-gray-700">--</p>
-            <p className="font-medium text-yellow-700">Email Address:</p>
-            <p className="text-gray-700">--</p>
-            <p className="font-medium text-yellow-700">Address:</p>
-            <p className="text-gray-700">0</p>
-            <p className="font-medium text-yellow-700">Registration Date:</p>
-            <p className="text-gray-700">2025-02-13</p>
-          </div>
-        </div>
-        {/* Right Side: Map */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full h-96 rounded-2xl overflow-hidden shadow-lg border-2 border-yellow-300">
-            <iframe
-              title="Consumer Location Map"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=77.2090%2C28.6139%2C77.2190%2C28.6239&layer=mapnik"
-              className="w-full h-full border-0"
-              allowFullScreen
-            ></iframe>
-          </div>
-        </div>
-      </div>
-    </nav>
+        </header>
+
+        {/* Dynamic Content idhar rahega*/}
+        {renderContent()}
+
+      </main>
+    </div>
   )
 }
 
