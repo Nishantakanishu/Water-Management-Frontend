@@ -9,13 +9,16 @@ import {
   MdLogout
 } from 'react-icons/md';
 import NishantProfilePic from './assets/image/Nishant profile pic.jpeg';
+import { useNavigate } from 'react-router-dom';
+import { authAPI } from './services/api';
 
 // Import Components
 import Dashboard from './components/Dashboard';
 import Profile from './components/Profile';
 import Billing from './components/Billing';
-import Report from './components/Report';
 import Usage from './components/Usage';
+import Report from './components/Report';
+import APITest from './components/APITest';
 
 // Sidebar Configuration
 const sidebarIcons = [
@@ -24,17 +27,60 @@ const sidebarIcons = [
   { id: 'usage', icon: <MdWaterDrop size={24} />, label: 'Water Usage' },
   { id: 'billing', icon: <MdReceiptLong size={24} />, label: 'Bills & Payments' },
   { id: 'report', icon: <MdReportProblem size={24} />, label: 'Report Issue' },
-  
 ];
 
 const ConsumerPage = () => {
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const navigate = useNavigate();
+  
+  // Get user data from localStorage
+  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const consumerName = localStorage.getItem('consumerName') || 'User';
+  const customerId = localStorage.getItem('meterSerialNumber') || 'ANN2411';
 
   // Handle tab change
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      console.log('🚪 Logging out...');
+      
+      // Call logout API (optional, as it will clear localStorage anyway)
+      await authAPI.logout();
+      
+      // Clear all localStorage data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('consumerName');
+      localStorage.removeItem('meterSerialNumber');
+      localStorage.removeItem('mobileNo');
+      localStorage.removeItem('address');
+      localStorage.removeItem('zone');
+      localStorage.removeItem('role');
+      
+      console.log('✅ Logged out successfully');
+      
+      // Redirect to login page
+      navigate('/');
+      
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Even if API fails, clear localStorage and redirect
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('consumerName');
+      localStorage.removeItem('meterSerialNumber');
+      localStorage.removeItem('mobileNo');
+      localStorage.removeItem('address');
+      localStorage.removeItem('zone');
+      localStorage.removeItem('role');
+      navigate('/');
+    }
   };
 
   // Render content based on active tab
@@ -44,12 +90,14 @@ const ConsumerPage = () => {
             return <Dashboard />;
         case 'profile':
             return <Profile />;
+        case 'usage':
+            return <Usage />;
         case 'billing':
             return <Billing />;
         case 'report':
             return <Report />;
-        case 'usage':
-             return <Usage />;
+        case 'api-test':
+            return <APITest />;
         default:
             return <Dashboard />;
     }
@@ -92,7 +140,10 @@ const ConsumerPage = () => {
         </nav>
 
         <div className="p-4 border-t border-stone-100">
-            <button className={`flex items-center gap-4 px-3 py-3 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 w-full transition-colors ${!sidebarOpen && 'justify-center'}`}>
+            <button 
+                onClick={handleLogout}
+                className={`flex items-center gap-4 px-3 py-3 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 w-full transition-colors ${!sidebarOpen && 'justify-center'}`}
+            >
                 <MdLogout size={24} />
                 <span className={`font-medium text-sm transition-opacity duration-300 ${!sidebarOpen && 'hidden'}`}>Sign Out</span>
             </button>
@@ -115,8 +166,8 @@ const ConsumerPage = () => {
 
             <div className="flex items-center gap-2 md:gap-4">
                 <div className="text-right hidden sm:block">
-                    <p className="text-sm font-bold text-stone-800">Ramkishore</p>
-                    <p className="text-xs text-stone-500">Consumer ID: ANN2411</p>
+                    <p className="text-sm font-bold text-stone-800">{consumerName}</p>
+                    <p className="text-xs text-stone-500">Consumer ID: {customerId}</p>
                 </div>
                 <img 
                     src={NishantProfilePic} 

@@ -1,16 +1,29 @@
-import React from 'react'
-import { Routes, Route } from 'react-router-dom';
-import Login from './Login'
-import ConsumerPage from './ConsumerPage'
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './Login';
+import WorkingLogin from './components/WorkingLogin';
+import CleanLogin from './components/CleanLogin';
+import FinalLogin from './components/FinalLogin';
+import ConsumerPage from './ConsumerPage';
+import ErrorBoundary from './components/ErrorBoundary';
 
-const App = () => {
+function App() {
+  // Check if user is logged in
+  const isLoggedIn = localStorage.getItem('authToken');
+
   return (
-    <Routes>
-      <Route path="/" element={<Login />} />
-      <Route path="/portal" element={<ConsumerPage />} />
-
-    </Routes>
-  )
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={isLoggedIn ? <Navigate to="/portal" /> : <Login />} />
+          <Route path="/working-login" element={<WorkingLogin />} />
+          <Route path="/clean-login" element={<CleanLogin />} />
+          <Route path="/final-login" element={<FinalLogin />} />
+          <Route path="/portal" element={<ConsumerPage />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
+  );
 }
 
 export default App;

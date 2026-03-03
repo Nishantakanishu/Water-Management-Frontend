@@ -1,37 +1,166 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MdDevices, MdSpeed, MdBadge, MdPhone, MdFingerprint, MdLocationCity, MdHome, MdSave, MdEdit } from 'react-icons/md';
 import NishantProfilePic from '../assets/image/Nishant profile pic.jpeg';
+import { profileAPI } from '../services/api';
+
+// Get user data from localStorage
+const getUserData = () => {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const consumerName = localStorage.getItem('consumerName') || 'User';
+    const meterSerialNumber = localStorage.getItem('meterSerialNumber') || 'Unknown';
+    const mobileNo = localStorage.getItem('mobileNo') || '';
+    const address = localStorage.getItem('address') || '';
+    const zone = localStorage.getItem('zone') || '';
+    const role = localStorage.getItem('role') || '';
+    return { userData, consumerName, meterSerialNumber, mobileNo, address, zone, role };
+};
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  
+  // Get user data from localStorage
+  const { consumerName, meterSerialNumber, mobileNo, address, zone, role } = getUserData();
+  
   const [formData, setFormData] = useState({
-    deviceId: "DEV12345678",
-    meterId: "MTR98765432",
-    customerId: "ANN2411",
-    mobileNo: "+91 98765 43210",
-    aadharNo: "XXXX-XXXX-1234",
-    localityName: "Green Park Extension",
-    address: "123, Block A, Green Park, New Delhi - 110016"
+    deviceId: meterSerialNumber || "",
+    meterId: meterSerialNumber || "",
+    customerId: meterSerialNumber || "",
+    mobileNo: mobileNo || "",
+    aadharNo: "XXXX-XXXX-1234", // Keep masked for security
+    localityName: zone || "",
+    address: address || "",
+    role: role || ""
   });
+
+  // Fetch profile data on component mount
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Try to fetch from API, but use localStorage as fallback
+        try {
+          const profileData = await profileAPI.getProfile();
+          // Update form with real API data
+          setFormData({
+            deviceId: profileData.MeterSerialNumber || meterSerialNumber || "",
+            meterId: profileData.MeterSerialNumber || meterSerialNumber || "",
+            customerId: profileData.MeterSerialNumber || meterSerialNumber || "",
+            mobileNo: profileData.MobileNo || mobileNo || "",
+            aadharNo: "XXXX-XXXX-1234", // Keep masked for security
+            localityName: profileData.Zone || zone || "",
+            address: profileData.address || address || "",
+            role: profileData.Role || role || ""
+          });
+        } catch (apiError) {
+          console.warn('API fetch failed, using localStorage data:', apiError);
+          // Use localStorage data as fallback
+          setFormData({
+            deviceId: meterSerialNumber || "",
+            meterId: meterSerialNumber || "",
+            customerId: meterSerialNumber || "",
+            mobileNo: mobileNo || "",
+            aadharNo: "XXXX-XXXX-1234",
+            localityName: zone || "",
+            address: address || "",
+            role: role || ""
+          });
+        }
+      } catch (err) {
+        console.error('Profile data fetch error:', err);
+        setError(err.message || 'Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [meterSerialNumber, mobileNo, address, zone, role]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+
+      await profileAPI.updateProfile(formData);
+      setSuccess('Profile updated successfully!');
+      setIsEditing(false);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Profile update error:', err);
+      setError(err.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <div className="mb-8 flex justify-between items-end">
-        <div>
-           <h1 className="text-2xl font-bold text-stone-800">My Profile</h1>
-           <p className="text-stone-500">Manage your personal information and preferences.</p>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center min-h-96">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+            <p className="text-stone-500">Loading profile data...</p>
+          </div>
         </div>
-        <button 
-            onClick={() => setIsEditing(!isEditing)}
-            className={`px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors ${isEditing ? 'bg-stone-200 text-stone-700' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
-        >
-            {isEditing ? <><MdEdit /> Cancel Editing</> : <><MdEdit /> Edit Profile</>}
-        </button>
-      </div>
+      )}
+
+      {/* Profile Content */}
+      {!loading && (
+        <>
+          {/* Error and Success Messages */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-red-100 p-2 rounded-lg">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-red-800 text-sm">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-100 p-2 rounded-lg">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-green-800 text-sm">{success}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-8 flex justify-between items-end">
+            <div>
+               <h1 className="text-2xl font-bold text-stone-800">My Profile</h1>
+               <p className="text-stone-500">Manage your personal information and preferences.</p>
+            </div>
+            <button 
+                onClick={() => setIsEditing(!isEditing)}
+                disabled={saving}
+                className={`px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors ${isEditing ? 'bg-stone-200 text-stone-700' : 'bg-amber-500 text-white hover:bg-amber-600'} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+                {isEditing ? <><MdEdit /> Cancel Editing</> : <><MdEdit /> Edit Profile</>}
+            </button>
+          </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-8">
          <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -45,7 +174,7 @@ const Profile = () => {
                     </div>
                  </div>
                  <div className="text-center">
-                     <h3 className="text-lg font-bold text-stone-800">Ramkishore S/O Patan Deen</h3>
+                     <h3 className="text-lg font-bold text-stone-800">{consumerName}</h3>
                      <p className="text-sm text-stone-500">Customer ID: {formData.customerId}</p>
                  </div>
              </div>
@@ -150,16 +279,46 @@ const Profile = () => {
                      </div>
                  </div>
 
+                 {/* Role */}
+                 <div>
+                     <label className="block text-sm font-medium text-stone-500 mb-1 ml-1" htmlFor="role">Role</label>
+                     <div className="relative">
+                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                             <MdBadge className="text-stone-400" />
+                         </div>
+                         <input 
+                            type="text" name="role" value={formData.role} onChange={handleChange} disabled={!isEditing}
+                            className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-60 disabled:cursor-not-allowed text-stone-800 font-medium"
+                            readOnly
+                         />
+                     </div>
+                 </div>
+
                  {isEditing && (
                      <div className="flex justify-end pt-4">
-                         <button className="bg-amber-500 text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-amber-600 transition flex items-center gap-2">
-                             <MdSave /> Save Changes
+                         <button 
+                             onClick={handleSave}
+                             disabled={saving}
+                             className="bg-amber-500 text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-amber-600 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                         >
+                             {saving ? (
+                                 <>
+                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                     Saving...
+                                 </>
+                             ) : (
+                                 <>
+                                     <MdSave /> Save Changes
+                                 </>
+                             )}
                          </button>
                      </div>
                  )}
              </div>
          </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

@@ -1,48 +1,161 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MdLocationOn, MdEdit } from 'react-icons/md';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import NishantProfilePic from '../assets/image/Nishant profile pic.jpeg';
+import { dashboardAPI } from '../services/api';
+
+// Get user data from localStorage
+const getUserData = () => {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const consumerName = localStorage.getItem('consumerName') || 'User';
+    const meterSerialNumber = localStorage.getItem('meterSerialNumber') || 'Unknown';
+    return { userData, consumerName, meterSerialNumber };
+};
 
 const Dashboard = () => {
-    // Water usage data per month
-    const waterUsageData = [
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [overview, setOverview] = useState(null);
+    const [waterUsageData, setWaterUsageData] = useState([
         { month: 'Jan', usage: 4200, target: 4000 },
         { month: 'Feb', usage: 3800, target: 4000 },
         { month: 'Mar', usage: 4500, target: 4000 },
         { month: 'Apr', usage: 5200, target: 4000 },
         { month: 'May', usage: 5800, target: 4000 },
-        { month: 'Jun', usage: 6100, target: 4000 },
-        { month: 'Jul', usage: 5900, target: 4000 },
-        { month: 'Aug', usage: 5400, target: 4000 },
-        { month: 'Sep', usage: 4900, target: 4000 },
-        { month: 'Oct', usage: 4300, target: 4000 },
-        { month: 'Nov', usage: 3900, target: 4000 },
-        { month: 'Dec', usage: 4100, target: 4000 }
-    ];
+        { month: 'Jun', usage: 6100, target: 4000 }
+    ]);
+    const [waterQuality, setWaterQuality] = useState([
+        { parameter: 'pH', value: 7.2, status: 'Good', unit: '' },
+        { parameter: 'Turbidity', value: 2.1, status: 'Good', unit: 'NTU' },
+        { parameter: 'Chlorine', value: 0.5, status: 'Good', unit: 'mg/L' }
+    ]);
+    const [meterLocation, setMeterLocation] = useState({
+        address: '321 Pine St',
+        zone: 'Noida',
+        coordinates: { lat: 28.5355, lng: 77.3910 }
+    });
+    
+    // Get user data from localStorage
+    const { consumerName, meterSerialNumber } = getUserData();
 
-    // Custom Tooltip
-    const CustomTooltip = ({ active, payload }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-white px-4 py-3 rounded-xl shadow-lg border border-stone-200">
-                    <p className="text-sm font-semibold text-stone-800">{payload[0].payload.month}</p>
-                    <p className="text-sm text-amber-600 font-bold">{payload[0].value.toLocaleString()} L</p>
-                    {payload[1] && (
-                        <p className="text-xs text-stone-500">Target: {payload[1].value.toLocaleString()} L</p>
-                    )}
-                </div>
-            );
-        }
-        return null;
-    };
+    // Fetch dashboard data
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // Fetch consumer summary data first
+                const summaryData = await dashboardAPI.getOverview();
+                console.log('📊 Consumer Summary API Response:', summaryData);
+                
+                if (summaryData && summaryData.data) {
+                    // Use real backend data
+                    const realSummaryData = {
+                        totalConsumption: summaryData.data.totalConsumption || 0,
+                        todayConsumption: summaryData.data.todayConsumption || 0,
+                        lastMonthConsumption: summaryData.data.lastMonthConsumption || 0,
+                        totalMeterReading: summaryData.data.totalMeterReading || 0,
+                        predictedConsumption: summaryData.data.predictedConsumption || 0
+                    };
+                    setOverview(realSummaryData);
+                    console.log('✅ Consumer Summary loaded:', realSummaryData);
+                } else {
+                    console.warn('No summary data found, using fallback');
+                    // Fallback data
+                    const fallbackSummaryData = {
+                        totalConsumption: 35,
+                        todayConsumption: 0,
+                        lastMonthConsumption: 35,
+                        totalMeterReading: 6966,
+                        predictedConsumption: 35.0
+                    };
+                    setOverview(fallbackSummaryData);
+                }
+
+                // Fetch water usage data
+                try {
+                    const usageData = await dashboardAPI.getWaterUsage('monthly');
+                    console.log('💧 Usage API Response:', usageData);
+                    if (usageData && usageData.data) {
+                        setWaterUsageData(usageData.data);
+                        console.log('✅ Usage data loaded:', usageData.data);
+                    }
+                } catch (usageErr) {
+                    console.warn('Usage data fetch failed:', usageErr);
+                }
+
+                // Fetch water quality data
+                try {
+                    const qualityData = await dashboardAPI.getWaterQuality();
+                    console.log('🔬 Water Quality API Response:', qualityData);
+                    if (qualityData && qualityData.data) {
+                        setWaterQuality(qualityData.data);
+                        console.log('✅ Water quality loaded:', qualityData.data);
+                    }
+                } catch (qualityErr) {
+                    console.warn('Water quality fetch failed:', qualityErr);
+                }
+
+                // Fetch meter location data
+                try {
+                    const locationData = await dashboardAPI.getMeterLocation();
+                    console.log('📍 Meter Location API Response:', locationData);
+                    if (locationData) {
+                        setMeterLocation(locationData);
+                        console.log('✅ Meter location loaded:', locationData);
+                    }
+                } catch (locationErr) {
+                    console.warn('Location data fetch failed:', locationErr);
+                }
+
+            } catch (err) {
+                console.error('Dashboard data fetch error:', err);
+                setError(err.message || 'Failed to load dashboard data');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []); // Empty dependency array - only run once
     return (
         
-        
         <div className="p-2 md:p-8 max-w-7xl mx-auto">
-            <div className="mb-6 md:mb-8">
-                <h5 className="font-bold text-stone-800">Dashboard Overview</h5>
-                {/* <p className="text-sm md:text-base text-stone-500">Welcome back, here's what's happening with your meter today.</p> */}
-            </div>
+            {/* Loading State */}
+            {loading && (
+                <div className="flex items-center justify-center min-h-96">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+                        <p className="text-stone-500">Loading dashboard data...</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-red-100 p-2 rounded-lg">
+                            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="text-red-800 font-semibold">Error loading dashboard</h3>
+                            <p className="text-red-600 text-sm">{error}</p>
+                            <p className="text-red-500 text-xs mt-1">Showing demo data instead</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Dashboard Content */}
+            {!loading && (
+                <>
+                    <div className="mb-6 md:mb-8">
+                        <h5 className="font-bold text-stone-800">Dashboard Overview</h5>
+                    </div>
             
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
@@ -54,10 +167,10 @@ const Dashboard = () => {
                          <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                             <img className="w-10 h-10 sm:w-24 sm:h-24 rounded-full border-4 border-white/20 object-cover shadow-md" src={NishantProfilePic} alt="Profile" />
                             <div className="text-center sm:text-left">
-                                <h2 className="text-xl md:text-2xl font-bold mb-1 text-white">Ramkishore S/O Patan Deen</h2>
-                                <p className="text-amber-100 opacity-90 font-medium text-sm md:text-base">High Consumer Category • Active</p>
+                                <h2 className="text-xl md:text-2xl font-bold mb-1 text-white">{consumerName}</h2>
+                                <p className="text-amber-100 opacity-90 font-medium text-sm md:text-base">CONSUMER • Active</p>
                                 <div className="mt-4 flex flex-wrap gap-2 md:gap-3 justify-center sm:justify-start">
-                                    <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm border border-white/10">Meter #6799416</span>
+                                    <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm border border-white/10">Meter #{meterSerialNumber}</span>
                                     <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm border border-white/10">Smart Meter Enabled</span>
                                 </div>
                             </div>
@@ -93,7 +206,7 @@ const Dashboard = () => {
                                         tickLine={{ stroke: '#d6d3d1' }}
                                         tickFormatter={(value) => `${(value / 1000).toFixed(1)}k`}
                                     />
-                                    <Tooltip content={<CustomTooltip />} />
+                                    <Tooltip />
                                     <Legend 
                                         wrapperStyle={{ paddingTop: '20px' }}
                                         iconType="circle"
@@ -141,7 +254,7 @@ const Dashboard = () => {
       tickFormatter={(value) => `${(value / 1000).toFixed(1)}k`}
     />
 
-    <Tooltip content={<CustomTooltip />} />
+    <Tooltip />
 
     <Legend
       wrapperStyle={{ paddingTop: "20px" }}
@@ -304,7 +417,9 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
-            </div>
+                </div>
+                </>
+            )}
         </div>
     );
 };
