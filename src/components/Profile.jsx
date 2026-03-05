@@ -46,21 +46,43 @@ const Profile = () => {
         // Try to fetch from API, but use localStorage as fallback
         try {
           const profileData = await profileAPI.getProfile();
+          console.log('👤 Profile API Response:', profileData);
+          
           // Update form with real API data
-          setFormData({
-            deviceId: profileData.MeterSerialNumber || meterSerialNumber || "",
-            meterId: profileData.MeterSerialNumber || meterSerialNumber || "",
-            customerId: profileData.MeterSerialNumber || meterSerialNumber || "",
-            mobileNo: profileData.MobileNo || mobileNo || "",
-            aadharNo: "XXXX-XXXX-1234", // Keep masked for security
-            localityName: profileData.Zone || zone || "",
-            address: profileData.address || address || "",
-            role: profileData.Role || role || ""
-          });
-        } catch (apiError) {
-          console.warn('API fetch failed, using localStorage data:', apiError);
+          if (profileData && profileData.data) {
+            const apiData = profileData.data;
+            setFormData({
+              deviceId: apiData.MeterSerialNumber || meterSerialNumber || "",
+              meterId: apiData.MeterSerialNumber || meterSerialNumber || "",
+              customerId: apiData.MeterSerialNumber || meterSerialNumber || "",
+              mobileNo: apiData.MobileNo || mobileNo || "",
+              aadharNo: "XXXX-XXXX-1234", // Keep masked for security
+              localityName: apiData.Zone || zone || "",
+              address: apiData.address || address || "",
+              role: apiData.Role || role || ""
+            });
+            console.log('✅ Profile data loaded from API:', apiData);
+            setSuccess('Profile updated successfully!');
+          } else {
+            console.log('⚠️ Invalid profile data format');
+            // Use localStorage data as fallback
+            const fallbackData = {
+              deviceId: meterSerialNumber || "",
+              meterId: meterSerialNumber || "",
+              customerId: meterSerialNumber || "",
+              mobileNo: mobileNo || "",
+              aadharNo: "XXXX-XXXX-1234",
+              localityName: zone || "",
+              address: address || "",
+              role: role || ""
+            };
+            setFormData(fallbackData);
+            console.log('📋 Using localStorage data as fallback');
+          }
+        } catch (apiErr) {
+          console.warn('Profile API failed:', apiErr);
           // Use localStorage data as fallback
-          setFormData({
+          const fallbackData = {
             deviceId: meterSerialNumber || "",
             meterId: meterSerialNumber || "",
             customerId: meterSerialNumber || "",
@@ -69,8 +91,11 @@ const Profile = () => {
             localityName: zone || "",
             address: address || "",
             role: role || ""
-          });
+          };
+          setFormData(fallbackData);
+          console.log('📋 Using localStorage data as fallback due to API error');
         }
+        
       } catch (err) {
         console.error('Profile data fetch error:', err);
         setError(err.message || 'Failed to load profile data');
@@ -78,9 +103,10 @@ const Profile = () => {
         setLoading(false);
       }
     };
-
+    
     fetchProfileData();
-  }, [meterSerialNumber, mobileNo, address, zone, role]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -108,6 +134,8 @@ const Profile = () => {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
+
+
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center min-h-96">

@@ -16,7 +16,6 @@ const Report = () => {
     const [updateSuccess, setUpdateSuccess] = useState(null);
     const [selectedComplaintId, setSelectedComplaintId] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("RESOLVED");
-    const [apiResponses, setApiResponses] = useState([]);
     
     // Fetch existing tickets
     useEffect(() => {
@@ -28,12 +27,10 @@ const Report = () => {
                 
                 const ticketsData = await reportAPI.getTickets();
                 console.log('📋 Complaints API Response:', ticketsData);
-                console.log('📋 Response status:', ticketsData.status);
-                console.log('📋 Response data:', ticketsData.data);
                 
-                if (ticketsData && ticketsData.data) {
-                    // Handle real backend response format
-                    const formattedTickets = ticketsData.data.map(ticket => ({
+                if (ticketsData && Array.isArray(ticketsData)) {
+                    // Handle real backend response format (Axios returns the array directly from api.js)
+                    const formattedTickets = ticketsData.map(ticket => ({
                         id: ticket.id,
                         complaintNumber: ticket.complaintNumber,
                         title: ticket.title,
@@ -41,7 +38,7 @@ const Report = () => {
                         type: ticket.type,
                         status: ticket.status,
                         createdAt: ticket.createdAt,
-                        assignedEngineerName: ticket.assignedEngineerName,
+                        assignedEngineerName: ticket.assignedEngineer?.fullName || ticket.assignedEngineer?.userName || ticket.assignedEngineerName,
                         acceptanceDeadline: ticket.acceptanceDeadline,
                         assignedAt: ticket.assignedAt,
                         acceptedAt: ticket.acceptedAt,
@@ -101,23 +98,9 @@ const Report = () => {
             const response = await reportAPI.updateComplaintStatus(selectedComplaintId, selectedStatus);
             console.log('✅ Status updated:', response);
 
-            // Add to API responses log
-            const apiResponse = {
-                timestamp: new Date().toLocaleString(),
-                type: 'UPDATE_STATUS',
-                endpoint: `POST /api/v1/complaints/consumer/status/${selectedComplaintId}?meterSerial=8c83fc050068019e&status=${selectedStatus}`,
-                request: {
-                    complaintId: selectedComplaintId,
-                    status: selectedStatus,
-                    meterSerial: '8c83fc050068019e'
-                },
-                response: response
-            };
-            setApiResponses(prev => [apiResponse, ...prev]);
-
-            // Extract status from API response
-            const updatedStatus = response.data?.status || response.status || selectedStatus;
-            const complaintNumber = response.data?.complaintNumber || `ID: ${selectedComplaintId}`;
+            // Extract status from API response (response is the returned object)
+            const updatedStatus = response?.status || selectedStatus;
+            const complaintNumber = response?.complaintNumber || `ID: ${selectedComplaintId}`;
             
             // Show professional status update message
             setUpdateSuccess(`Complaint ${complaintNumber} status successfully updated to: ${updatedStatus}`);
@@ -128,14 +111,14 @@ const Report = () => {
                     ? { 
                         ...ticket, 
                         status: updatedStatus,
-                        updatedAt: response.data?.updatedAt || new Date().toISOString(),
+                        updatedAt: response?.updatedAt || new Date().toISOString(),
                         // Update other fields from API response if available
-                        ...(response.data && {
-                            acceptanceDeadline: response.data.acceptanceDeadline,
-                            acceptedAt: response.data.acceptedAt,
-                            resolvedAt: response.data.resolvedAt,
-                            escalatedAt: response.data.escalatedAt,
-                            assignedEngineerName: response.data.assignedEngineer?.fullName || response.data.assignedEngineerName
+                        ...(response && {
+                            acceptanceDeadline: response.acceptanceDeadline,
+                            acceptedAt: response.acceptedAt,
+                            resolvedAt: response.resolvedAt,
+                            escalatedAt: response.escalatedAt,
+                            assignedEngineerName: response.assignedEngineer?.fullName || response.assignedEngineerName
                         })
                     }
                     : ticket
@@ -175,20 +158,10 @@ const Report = () => {
             const response = await reportAPI.submitTicket(complaintData);
             console.log('✅ Complaint submitted:', response);
 
-            // Add to API responses log
-            const apiResponse = {
-                timestamp: new Date().toLocaleString(),
-                type: 'CREATE_COMPLAINT',
-                endpoint: 'POST /api/v1/complaints/8c83fc050068019e',
-                request: complaintData,
-                response: response
-            };
-            setApiResponses(prev => [apiResponse, ...prev]);
-
-            if (response && response.data) {
-                // Handle real backend response
-                const complaint = response.data;
-                setSuccess(`Complaint submitted successfully! Complaint Number: ${complaint.complaintNumber}`);
+            if (response && response.id) {
+                // Handle real backend response where response IS the ticket object
+                const complaint = response;
+                setSuccess(`Complaint submitted successfully! Complaint Number: ${complaint.complaintNumber || complaint.id}`);
                 
                 // Add new complaint to tickets list
                 const newTicket = {

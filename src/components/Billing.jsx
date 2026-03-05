@@ -25,44 +25,21 @@ const Billing = () => {
                 console.log('📄 Current Bill API Response:', currentBillData);
                 console.log('📋 Full Backend Data:', JSON.stringify(currentBillData, null, 2));
                 
-                // Handle real backend data or mock data with enhanced validation
-                let billData = currentBillData;
-                let dataSource = 'Unknown';
+                // Handle real backend data
+                let billData = null;
                 
-                // Convert JSON response to object and extract data
                 if (currentBillData && typeof currentBillData === 'object') {
                     if (currentBillData.data && (currentBillData.data.billNumber || currentBillData.data.amount)) {
-                        // Real backend data structure: { data: { billNumber: "...", amount: ... } }
-                        billData = currentBillData;
-                        dataSource = 'Real Backend';
-                        console.log('✅ Real backend data structure detected');
+                        billData = currentBillData.data;
                     } else if (currentBillData.billNumber || currentBillData.amount) {
-                        // Direct data object: { billNumber: "...", amount: ... }
-                        billData = { data: currentBillData };
-                        dataSource = 'Real Backend (Direct)';
-                        console.log('✅ Direct data object detected');
+                        billData = currentBillData;
                     } else {
-                        console.log('⚠️ Invalid data format, using mock backend data for testing');
-                        dataSource = 'Mock Data (Invalid Structure)';
+                        throw new Error('Invalid backend response structure');
                     }
-                } else {
-                    console.log('⚠️ Invalid data format, using mock backend data for testing');
-                    dataSource = 'Mock Data (Invalid Type)';
                 }
                 
-                // Set the bill data (handle both direct response and nested data)
-                const finalBillData = billData.data || billData;
-                setCurrentBill(finalBillData);
+                setCurrentBill(billData);
                 
-                console.log('🎯 Final bill data set:', finalBillData);
-                console.log('📊 Data source:', dataSource);
-                console.log('🔍 Data validation:', {
-                    hasBillNumber: !!finalBillData.billNumber,
-                    hasAmount: !!finalBillData.amount,
-                    hasStatus: !!finalBillData.status,
-                    hasReadings: !!(finalBillData.currentReading && finalBillData.previousReading)
-                });
-
             } catch (err) {
                 console.error('🚨 Current bill fetch error:', err);
                 setError(err.message || 'Failed to load current bill');
@@ -74,124 +51,29 @@ const Billing = () => {
         fetchCurrentBill();
     }, []);
 
-    // Fetch billing history
     const fetchBillingHistory = async () => {
         try {
             setHistoryLoading(true);
+            setError(null);
             console.log('📜 Fetching billing history...');
-            console.log('🌐 API URL: http://115.124.119.161:5029/api/v1/billing/history');
-
-            // First try real API call
-            try {
-                console.log('🔄 Attempting real backend API call for history...');
-                const response = await fetch('http://115.124.119.161:5029/api/v1/billing/history', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('authToken') || 'eyJhbGciOiJIUzI1NiJ9.eyJDb25zdW1lck5hbWUiOiJSYXZpa2FudCIsIk1ldGVyU2VyaWFsTnVtYmVyIjoiOGM4M2ZjMDUwMDY4MDE5ZSIsIk1vYmlsZU5vIjoiOTk5OTk5OTc4OSIsImFkZHJlc3MiOiIzMjEgUGluZSBTdCIsIlpvbmUiOiJOb2lkYSIsIlJvbGUiOiJDT05TVU1FUiIsInN1YiI6IkNOUzAwNCIsImlhdCI6MTc3MjUyNzQzOSwibmJmIjoxNzcyNTI3NDM5LCJleHAiOjE3NzI2MTM4Mzl9.qTtCHbu8Q2MDIXtx9sQKWY32-hBttc1ZBFOIINwcQrE'}`
-                    },
-                    body: JSON.stringify({
-                        levelName: "Meter",
-                        levelValue: "8c83fc050068019e",
-                        startDate: "2025-12",
-                        endDate: "2026-01"
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('✅ Real backend history data received:', data);
-                    
-                    // Convert JSON to object and handle different response structures
-                    let historyData = [];
-                    if (data && data.data) {
-                        historyData = data.data;
-                    } else if (Array.isArray(data)) {
-                        historyData = data;
-                    }
-                    
-                    setBillingHistory(historyData);
-                    setShowBillingHistory(true);
-                    console.log('📜 Real billing history set:', historyData);
-                    return;
-                } else {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-            } catch (realApiError) {
-                console.log('❌ Real API failed, trying CORS bypass:', realApiError.message);
-            }
-
-            // Fallback to CORS bypass approach
-            const response = await fetch('http://115.124.119.161:5029/api/v1/billing/history', {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJDb25zdW1lck5hbWUiOiJSYXZpa2FudCIsIk1ldGVyU2VyaWFsTnVtYmVyIjoiOGM4M2ZjMDUwMDY4MDE5ZSIsIk1vYmlsZU5vIjoiOTk5OTk5OTc4OSIsImFkZHJlc3MiOiIzMjEgUGluZSBTdCIsIlpvbmUiOiJOb2lkYSIsIlJvbGUiOiJDT05TVU1FUiIsInN1YiI6IkNOUzAwNCIsImlhdCI6MTc3MjUyNzQzOSwibmJmIjoxNzcyNTI3NDM5LCJleHAiOjE3NzI2MTM4Mzl9.qTtCHbu8Q2MDIXtx9sQKWY32-hBttc1ZBFOIINwcQrE'
-                },
-                body: JSON.stringify({
-                    levelName: "Meter",
-                    levelValue: "8c83fc050068019e",
-                    startDate: "2025-12",
-                    endDate: "2026-01"
-                })
+            
+            const meterSerial = localStorage.getItem('meterSerialNumber') || '8c83fc050068019e';
+            const data = await billingAPI.getPaymentHistory({
+                levelName: "Meter",
+                levelValue: meterSerial,
+                startDate: "2025-12",
+                endDate: "2026-03"
             });
-
-            console.log('✅ Billing History API request sent successfully (CORS bypassed)');
-
-            // Mock response for testing - replace with actual API response when available
-            const mockHistoryResponse = {
-                success: true,
-                data: [
-                    {
-                        billNumber: "BILL-JAN-2026-001",
-                        billingPeriod: "January 2026",
-                        dueDate: "2026-01-15",
-                        amount: 420.00,
-                        status: "PAID",
-                        paidDate: "2026-01-10",
-                        currentReading: 6846,
-                        previousReading: 6726,
-                        consumption: 120,
-                        waterCharges: 320.00,
-                        sewerageCharges: 70.00,
-                        taxes: 30.00
-                    },
-                    {
-                        billNumber: "BILL-DEC-2025-001",
-                        billingPeriod: "December 2025",
-                        dueDate: "2025-12-15",
-                        amount: 450.00,
-                        status: "PAID",
-                        paidDate: "2025-12-08",
-                        currentReading: 6726,
-                        previousReading: 6586,
-                        consumption: 140,
-                        waterCharges: 350.00,
-                        sewerageCharges: 75.00,
-                        taxes: 25.00
-                    },
-                    {
-                        billNumber: "BILL-NOV-2025-001",
-                        billingPeriod: "November 2025",
-                        dueDate: "2025-11-15",
-                        amount: 380.00,
-                        status: "PAID",
-                        paidDate: "2025-11-12",
-                        currentReading: 6586,
-                        previousReading: 6486,
-                        consumption: 100,
-                        waterCharges: 300.00,
-                        sewerageCharges: 60.00,
-                        taxes: 20.00
-                    }
-                ]
-            };
-
-            setBillingHistory(mockHistoryResponse.data);
+            
+            let historyData = [];
+            if (data && data.data) {
+                historyData = data.data;
+            } else if (Array.isArray(data)) {
+                historyData = data;
+            }
+            
+            setBillingHistory(historyData);
             setShowBillingHistory(true);
-            console.log('📜 Mock billing history loaded:', mockHistoryResponse.data);
-
         } catch (err) {
             console.error('🚨 Billing history fetch error:', err);
             setError(err.message || 'Failed to load billing history');
@@ -226,6 +108,7 @@ const Billing = () => {
 
     return (
         <div className="p-4 md:p-8 max-w-6xl mx-auto">
+
             {/* Loading State */}
             {loading && (
                 <div className="flex items-center justify-center min-h-96">

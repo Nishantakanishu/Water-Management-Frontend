@@ -17,7 +17,7 @@ const FinalLogin = () => {
       console.log('🔑 Attempting login with:', { email, password: '***' });
       
       // Use mode: 'no-cors' to bypass CORS completely
-      const response = await fetch('http://115.124.119.161:5029/api/v1/auth/consumer/login', {
+      await fetch('http://115.124.119.161:5029/api/v1/auth/consumer/login', {
         method: 'POST',
         mode: 'no-cors', // This bypasses CORS
         headers: {

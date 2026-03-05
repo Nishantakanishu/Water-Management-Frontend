@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MdLocationOn, MdEdit } from 'react-icons/md';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import NishantProfilePic from '../assets/image/Nishant profile pic.jpeg';
-import { dashboardAPI } from '../services/api';
+import { dashboardAPI, usageAPI } from '../services/api';
 
 // Get user data from localStorage
 const getUserData = () => {
@@ -16,24 +16,9 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [overview, setOverview] = useState(null);
-    const [waterUsageData, setWaterUsageData] = useState([
-        { month: 'Jan', usage: 4200, target: 4000 },
-        { month: 'Feb', usage: 3800, target: 4000 },
-        { month: 'Mar', usage: 4500, target: 4000 },
-        { month: 'Apr', usage: 5200, target: 4000 },
-        { month: 'May', usage: 5800, target: 4000 },
-        { month: 'Jun', usage: 6100, target: 4000 }
-    ]);
-    const [waterQuality, setWaterQuality] = useState([
-        { parameter: 'pH', value: 7.2, status: 'Good', unit: '' },
-        { parameter: 'Turbidity', value: 2.1, status: 'Good', unit: 'NTU' },
-        { parameter: 'Chlorine', value: 0.5, status: 'Good', unit: 'mg/L' }
-    ]);
-    const [meterLocation, setMeterLocation] = useState({
-        address: '321 Pine St',
-        zone: 'Noida',
-        coordinates: { lat: 28.5355, lng: 77.3910 }
-    });
+    const [waterUsageData, setWaterUsageData] = useState([]); // Start with empty array
+    const [waterQuality, setWaterQuality] = useState([]); // Start with empty array
+    const [meterLocation, setMeterLocation] = useState(null); // Start with null
     
     // Get user data from localStorage
     const { consumerName, meterSerialNumber } = getUserData();
@@ -61,40 +46,75 @@ const Dashboard = () => {
                     setOverview(realSummaryData);
                     console.log('✅ Consumer Summary loaded:', realSummaryData);
                 } else {
-                    console.warn('No summary data found, using fallback');
-                    // Fallback data
-                    const fallbackSummaryData = {
-                        totalConsumption: 35,
-                        todayConsumption: 0,
-                        lastMonthConsumption: 35,
-                        totalMeterReading: 6966,
-                        predictedConsumption: 35.0
-                    };
-                    setOverview(fallbackSummaryData);
+                    console.warn('No summary data found');
+                    // Set empty state when no data
+                    setOverview(null);
                 }
 
                 // Fetch water usage data
                 try {
-                    const usageData = await dashboardAPI.getWaterUsage('monthly');
+                    const usageData = await usageAPI.getUsageData('monthly');
                     console.log('💧 Usage API Response:', usageData);
-                    if (usageData && usageData.data) {
-                        setWaterUsageData(usageData.data);
-                        console.log('✅ Usage data loaded:', usageData.data);
+                    
+                    if (usageData) {
+                        let monthlyData = [];
+                        if (Array.isArray(usageData)) {
+                            monthlyData = usageData.map(item => ({
+                                month: item.month || 'Unknown',
+                                usage: item.consumption || 0,
+                                target: 300 // example target line value
+                            }));
+                        } else {
+                            // Backend returning Object map ({"February": 35})
+                            monthlyData = Object.entries(usageData)
+                                .filter(([key]) => key !== 'Unknown')
+                                .map(([month, usage]) => ({
+                                    month: month,
+                                    usage: usage || 0,
+                                    target: 300 // dummy target since api doesn't return one
+                                }));
+                        }
+                        console.log('✅ Usage data loaded (Dashboard):', monthlyData);
+                        setWaterUsageData(monthlyData);
+                    } else {
+                        console.warn('No usage data found directly');
+                        setWaterUsageData([]);
                     }
                 } catch (usageErr) {
                     console.warn('Usage data fetch failed:', usageErr);
+                    setWaterUsageData([]);
                 }
 
                 // Fetch water quality data
                 try {
                     const qualityData = await dashboardAPI.getWaterQuality();
                     console.log('🔬 Water Quality API Response:', qualityData);
+                    
+                    // Handle various data structures
+                    let rawQualityData = [];
                     if (qualityData && qualityData.data) {
-                        setWaterQuality(qualityData.data);
-                        console.log('✅ Water quality loaded:', qualityData.data);
+                        rawQualityData = Array.isArray(qualityData.data) ? qualityData.data : Object.values(qualityData.data);
+                    } else if (Array.isArray(qualityData)) {
+                        rawQualityData = qualityData;
+                    }
+                    
+                    if (rawQualityData.length > 0) {
+                        // Transform real data for display
+                        const transformedQualityData = rawQualityData.map(item => ({
+                            parameter: item.parameter || item.name || 'Unknown',
+                            value: item.value || 0,
+                            status: item.status || 'Good',
+                            unit: item.unit || ''
+                        }));
+                        setWaterQuality(transformedQualityData);
+                        console.log('✅ Water quality loaded:', transformedQualityData);
+                    } else {
+                        console.warn('No water quality data found directly');
+                        setWaterQuality([]);
                     }
                 } catch (qualityErr) {
                     console.warn('Water quality fetch failed:', qualityErr);
+                    setWaterQuality([]);
                 }
 
                 // Fetch meter location data
@@ -104,9 +124,13 @@ const Dashboard = () => {
                     if (locationData) {
                         setMeterLocation(locationData);
                         console.log('✅ Meter location loaded:', locationData);
+                    } else {
+                        console.warn('No location data found');
+                        setMeterLocation(null);
                     }
                 } catch (locationErr) {
                     console.warn('Location data fetch failed:', locationErr);
+                    setMeterLocation(null);
                 }
 
             } catch (err) {
@@ -120,8 +144,8 @@ const Dashboard = () => {
         fetchDashboardData();
     }, []); // Empty dependency array - only run once
     return (
-        
-        <div className="p-2 md:p-8 max-w-7xl mx-auto">
+        <div className="p-4 md:p-8 max-w-6xl mx-auto">
+
             {/* Loading State */}
             {loading && (
                 <div className="flex items-center justify-center min-h-96">
@@ -282,20 +306,87 @@ const Dashboard = () => {
   </AreaChart>
 </ResponsiveContainer>
 
+                            {/* Overview Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                                <div className="bg-white rounded-xl shadow-sm border border-stone-100 p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-stone-500 mb-1">Total Consumption</p>
+                                            <p className="text-2xl font-bold text-stone-800">
+                                                {overview ? (overview.totalConsumption / 1000).toFixed(1) + 'kL' : '0L'}
+                                            </p>
+                                        </div>
+                                        <div className="text-blue-500">
+                                            <MdLocationOn size={24} />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-xl shadow-sm border border-stone-100 p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-stone-500 mb-1">Today's Consumption</p>
+                                            <p className="text-2xl font-bold text-stone-800">
+                                                {overview ? (overview.todayConsumption / 1000).toFixed(1) + 'kL' : '0L'}
+                                            </p>
+                                        </div>
+                                        <div className="text-green-500">
+                                            <MdLocationOn size={24} />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-xl shadow-sm border border-stone-100 p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-stone-500 mb-1">Meter Reading</p>
+                                            <p className="text-2xl font-bold text-stone-800">
+                                                {overview ? overview.totalMeterReading.toLocaleString() : '0'}
+                                            </p>
+                                        </div>
+                                        <div className="text-purple-500">
+                                            <MdLocationOn size={24} />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-xl shadow-sm border border-stone-100 p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-stone-500 mb-1">Predicted Consumption</p>
+                                            <p className="text-2xl font-bold text-stone-800">
+                                                {overview ? (overview.predictedConsumption / 1000).toFixed(1) + 'kL' : '0L'}
+                                            </p>
+                                        </div>
+                                        <div className="text-orange-500">
+                                            <MdLocationOn size={24} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             
                             {/* Stats Summary */}
                             <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-stone-100">
                                 <div className="text-center">
                                     <p className="text-xs text-stone-500 mb-1">Avg Monthly</p>
-                                    <p className="text-lg font-bold text-stone-800">4,925L</p>
+                                    <p className="text-lg font-bold text-stone-800">
+                                        {overview ? (overview.lastMonthConsumption / 1000).toFixed(1) + 'kL' : '0L'}
+                                    </p>
                                 </div>
                                 <div className="text-center">
                                     <p className="text-xs text-stone-500 mb-1">Peak Month</p>
-                                    <p className="text-lg font-bold text-blue-400">Jun (6,100L)</p>
+                                    <p className="text-lg font-bold text-blue-400">
+                                        {waterUsageData && waterUsageData.length > 0 ? 
+                                            Math.max(...waterUsageData.map(d => d.usage)).toLocaleString() + 'L' : 
+                                            '0L'
+                                        }
+                                    </p>
                                 </div>
                                 <div className="text-center">
                                     <p className="text-xs text-stone-500 mb-1">This Month</p>
-                                    <p className="text-lg font-bold text-emerald-600">4,100L</p>
+                                    <p className="text-lg font-bold text-emerald-600">
+                                        {waterUsageData && waterUsageData.length > 0 ? 
+                                            waterUsageData[waterUsageData.length - 1]?.usage?.toLocaleString() + 'L' : 
+                                            '0L'
+                                        }
+                                    </p>
                                 </div>
                             </div>
                         </div>

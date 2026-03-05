@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* global require */
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const cors = require('cors');
@@ -24,7 +26,7 @@ app.use('/api', createProxyMiddleware({
   },
   onProxyReq: (proxyReq, req, res) => {
     console.log('🔄 Proxying request to backend:', proxyReq.method, proxyReq.url);
-    
+
     // Handle preflight OPTIONS requests
     if (proxyReq.method === 'OPTIONS') {
       res.writeHead(200, {
@@ -37,15 +39,15 @@ app.use('/api', createProxyMiddleware({
       return;
     }
   },
-  onProxyRes: (proxyRes, req, res) => {
+  onProxyRes: (proxyRes, req) => {
     console.log('📥 Backend response:', proxyRes.statusCode, req.url);
   }
 }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: 'Proxy server is running',
     target: 'http://115.124.119.161:5029'
   });

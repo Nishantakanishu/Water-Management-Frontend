@@ -9,7 +9,6 @@ import {
   MdLogout
 } from 'react-icons/md';
 import NishantProfilePic from './assets/image/Nishant profile pic.jpeg';
-import { useNavigate } from 'react-router-dom';
 import { authAPI } from './services/api';
 
 // Import Components
@@ -33,10 +32,6 @@ const ConsumerPage = () => {
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const navigate = useNavigate();
-  
-  // Get user data from localStorage
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
   const consumerName = localStorage.getItem('consumerName') || 'User';
   const customerId = localStorage.getItem('meterSerialNumber') || 'ANN2411';
 
@@ -50,10 +45,7 @@ const ConsumerPage = () => {
     try {
       console.log('🚪 Logging out...');
       
-      // Call logout API (optional, as it will clear localStorage anyway)
-      await authAPI.logout();
-      
-      // Clear all localStorage data
+      // Clear all localStorage data first
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       localStorage.removeItem('consumerName');
@@ -63,14 +55,23 @@ const ConsumerPage = () => {
       localStorage.removeItem('zone');
       localStorage.removeItem('role');
       
-      console.log('✅ Logged out successfully');
+      // Call logout API (optional, as localStorage is already cleared)
+      try {
+        await authAPI.logout();
+        console.log('✅ Logout API called successfully');
+      } catch (apiErr) {
+        console.warn('Logout API failed:', apiErr);
+      }
       
-      // Redirect to login page
-      navigate('/');
+      console.log('✅ Local storage cleared');
+      
+      // Force redirect to login page
+      window.location.href = '/';
       
     } catch (error) {
       console.error('❌ Logout error:', error);
-      // Even if API fails, clear localStorage and redirect
+      
+      // Even if error occurs, clear localStorage and redirect
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       localStorage.removeItem('consumerName');
@@ -79,7 +80,9 @@ const ConsumerPage = () => {
       localStorage.removeItem('address');
       localStorage.removeItem('zone');
       localStorage.removeItem('role');
-      navigate('/');
+      
+      // Force redirect to login page
+      window.location.href = '/';
     }
   };
 

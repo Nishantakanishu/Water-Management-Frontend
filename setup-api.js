@@ -1,3 +1,4 @@
+/* eslint-env node */
 // API Setup and Test Script
 // This will help verify your backend setup
 
@@ -14,7 +15,7 @@ const API_CONFIG = {
 async function testAPIConnection() {
   console.log('🔍 Testing API Connection...');
   console.log('📍 API URL:', API_CONFIG.BASE_URL + API_CONFIG.LOGIN_ENDPOINT);
-  
+
   try {
     const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.LOGIN_ENDPOINT, {
       method: 'POST',
@@ -27,11 +28,11 @@ async function testAPIConnection() {
     });
 
     const data = await response.json();
-    
+
     console.log('✅ API Response Status:', response.status);
     console.log('✅ API Response Headers:', Object.fromEntries(response.headers.entries()));
     console.log('✅ API Response Data:', data);
-    
+
     if (data.success) {
       console.log('🎉 SUCCESS: Login API is working!');
       console.log('👤 User Name:', data.data.ConsumerName);
@@ -44,7 +45,7 @@ async function testAPIConnection() {
       console.log('❌ FAILED: Login API returned error');
       console.log('Error Message:', data.message);
     }
-    
+
     return data;
   } catch (error) {
     console.error('🚨 NETWORK ERROR:', error.message);
@@ -57,17 +58,17 @@ async function testAPIConnection() {
 // Backend health check
 async function checkBackendHealth() {
   console.log('🏥 Checking Backend Health...');
-  
+
   try {
     const response = await fetch(API_CONFIG.BASE_URL.replace('/api/v1', '') + '/health', {
       method: 'GET',
       mode: 'cors'
     });
-    
+
     const isHealthy = response.ok;
     console.log(isHealthy ? '✅ Backend is HEALTHY' : '❌ Backend is DOWN');
     console.log('Health Status:', response.status);
-    
+
     return isHealthy;
   } catch (error) {
     console.error('🚨 Backend Health Check Failed:', error.message);
@@ -111,6 +112,8 @@ console.log(`
 `);
 
 // Export for use in other files
+// eslint-disable-next-line no-undef
 if (typeof module !== 'undefined' && module.exports) {
+  // eslint-disable-next-line no-undef
   module.exports = { API_CONFIG, testAPIConnection, checkBackendHealth };
 }

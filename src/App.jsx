@@ -13,7 +13,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={isLoggedIn ? <Navigate to="/portal" /> : <Login />} />
           <Route path="/working-login" element={<WorkingLogin />} />

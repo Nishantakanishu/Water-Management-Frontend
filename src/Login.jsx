@@ -10,27 +10,6 @@ const Login = () => {
   const [redirect, setRedirect] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Test API connection
-  const testConnection = async () => {
-    try {
-      console.log('Testing API connection...');
-      const response = await fetch('http://115.124.119.161:5029/api/v1/auth/consumer/login', {
-        method: 'POST',
-        mode: 'no-cors', // This bypasses CORS
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: "CNS004", password: "9999999789" }),
-      });
-      
-      console.log('✅ Request sent successfully (CORS bypassed)');
-      alert(`API Connection Test: SUCCESS\nCORS bypassed - Request sent to backend`);
-    } catch (err) {
-      console.error('Connection test failed:', err);
-      alert(`Connection Error: ${err.message}`);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -43,60 +22,22 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log('Attempting login with:', { email, password: '***' });
-      console.log('API endpoint: http://115.124.119.161:5029/api/v1/auth/consumer/login');
+      console.log('🚀 Starting comprehensive login process...');
+      console.log('Credentials:', { email, password: '***' });
       
-      // Use mode: 'no-cors' to bypass CORS completely
-      const response = await fetch('http://115.124.119.161:5029/api/v1/auth/consumer/login', {
-        method: 'POST',
-        mode: 'no-cors', // This bypasses CORS
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password })
-      });
+      const data = await authAPI.login({ email, password });
+      
+      if (data && (data.data || data.token || data.success)) {
+        console.log('✅ Login completed successfully!');
+        setError("");
+        setRedirect(true);
+      } else {
+        throw new Error('Invalid login credentials');
+      }
 
-      // With no-cors, we can't read the response, so we'll simulate success
-      console.log('✅ Request sent successfully (CORS bypassed)');
-      
-      // Simulate successful login with real backend data
-      const mockResponse = {
-        success: true,
-        data: {
-          ConsumerName: "Ravikant",
-          MeterSerialNumber: "8c83fc050068019e",
-          MobileNo: "9999999789",
-          address: "321 Pine St",
-          Zone: "Noida",
-          Role: "CONSUMER",
-          token: "eyJhbGciOiJIUzI1NiJ9.eyJDb25zdW1lck5hbWUiOiJSYXZpa2FudCIsIk1ldGVyU2VyaWFsTnVtYmVyIjoiOGM4M2ZjMDUwMDY4MDE5ZSIsIk1vYmlsZU5vIjoiOTk5OTk5OTc4OSIsImFkZHJlc3MiOiIzMjEgUGluZSBTdCIsIlpvbmUiOiJOb2lkYSIsIlJvbGUiOiJDT05TVU1FUiIsInN1YiI6IkNOUzAwNCIsImlhdCI6MTc3MjQ0NzA3MiwibmJmIjoxNzcyNDQ3MDcyLCJleHAiOjE3NzI1MzM0NzJ9.Be2-SEybfGOAA2Dd3A1qxYFUks9WKcs2HWJtCM6XEoY"
-        }
-      };
-
-      // Store user data
-      localStorage.setItem('authToken', mockResponse.data.token);
-      localStorage.setItem('user', JSON.stringify(mockResponse.data));
-      localStorage.setItem('consumerName', mockResponse.data.ConsumerName);
-      localStorage.setItem('meterSerialNumber', mockResponse.data.MeterSerialNumber);
-      localStorage.setItem('mobileNo', mockResponse.data.MobileNo);
-      localStorage.setItem('address', mockResponse.data.address);
-      localStorage.setItem('zone', mockResponse.data.Zone);
-      localStorage.setItem('role', mockResponse.data.Role);
-      
-      console.log('🎯 User data stored:', mockResponse.data);
-      
-      console.log('Login successful, storing user data');
-      setError("");
-      setRedirect(true);
     } catch (err) {
-      console.error('Login error:', err);
-      console.error('Error details:', {
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data
-      });
-      
-      setError(err.message || "Invalid email or password");
+      console.error('🚨 Login Error:', err);
+      setError(err.message || "Login failed");
     } finally {
       setIsLoading(false);
     }
